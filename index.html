@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Reader</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 30px 20px;
+            background: #f5f5f5;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        textarea {
+            width: 100%;
+            height: 150px;
+            font-size: 18px;
+            padding: 12px;
+            box-sizing: border-box;
+        }
+
+        button {
+            display: block;
+            margin: 20px auto;
+            padding: 15px 30px;
+            font-size: 18px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        #start {
+            background: #222;
+            color: white;
+        }
+
+        .box {
+            background: white;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 12px;
+        }
+
+        #result {
+            font-size: 20px;
+            line-height: 1.6;
+        }
+
+        #score {
+            text-align: center;
+            font-size: 40px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>English Reader</h1>
+
+<div class="box">
+
+    <h3>Câu mẫu</h3>
+
+    <textarea id="original">
+The first print ran to only 3,000 copies.
+    </textarea>
+
+    <button id="start">🎤 Bắt đầu đọc</button>
+
+</div>
+
+<div class="box">
+
+    <h3>Anh đã đọc</h3>
+
+    <div id="result">
+        Chưa đọc...
+    </div>
+
+</div>
+
+<div class="box">
+
+    <div id="score">
+        -
+    </div>
+
+</div>
+
+
+<script>
+
+const startButton = document.getElementById("start");
+const originalText = document.getElementById("original");
+const result = document.getElementById("result");
+const score = document.getElementById("score");
+
+
+// Kiểm tra trình duyệt có Speech Recognition không
+const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+if (!SpeechRecognition) {
+
+    alert("Trình duyệt không hỗ trợ nhận diện giọng nói.");
+
+} else {
+
+    const recognition = new SpeechRecognition();
+
+    recognition.lang = "en-US";
+
+    recognition.continuous = false;
+
+    recognition.interimResults = false;
+
+
+    startButton.onclick = function() {
+
+        result.innerHTML = "🎧 Đang nghe...";
+
+        score.innerHTML = "...";
+
+        recognition.start();
+
+    };
+
+
+    recognition.onresult = function(event) {
+
+        const spokenText =
+            event.results[0][0].transcript;
+
+        result.innerHTML =
+            spokenText;
+
+        calculateScore(
+            originalText.value,
+            spokenText
+        );
+
+    };
+
+
+    recognition.onerror = function(event) {
+
+        result.innerHTML =
+            "Không nhận được giọng nói: " +
+            event.error;
+
+    };
+
+}
+
+
+// Chấm điểm
+function calculateScore(original, spoken) {
+
+    const originalWords =
+        normalize(original).split(" ");
+
+    const spokenWords =
+        normalize(spoken).split(" ");
+
+
+    let correct = 0;
+
+
+    originalWords.forEach(function(word, index) {
+
+        if (spokenWords[index] === word) {
+
+            correct++;
+
+        }
+
+    });
+
+
+    let percentage =
+        Math.round(
+            correct / originalWords.length * 100
+        );
+
+
+    score.innerHTML =
+        percentage + "/100";
+
+}
+
+
+function normalize(text) {
+
+    return text
+        .toLowerCase()
+        .replace(/[.,!?;:'"]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+}
+
+</script>
+
+</body>
+</html>
