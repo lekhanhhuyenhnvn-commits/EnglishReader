@@ -1,121 +1,194 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>English Reader</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 700px;
-            margin: 0 auto;
-            padding: 30px 20px;
-            background: #f5f5f5;
-        }
+<title>English Reader</title>
 
-        h1 {
-            text-align: center;
-        }
+<style>
 
-        textarea {
-            width: 100%;
-            height: 150px;
-            font-size: 18px;
-            padding: 12px;
-            box-sizing: border-box;
-        }
+body {
+    font-family: Arial, sans-serif;
+    max-width: 700px;
+    margin: auto;
+    padding: 20px;
+    background: #f5f5f5;
+}
 
-        button {
-            display: block;
-            margin: 20px auto;
-            padding: 15px 30px;
-            font-size: 18px;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-        }
+h1 {
+    text-align: center;
+}
 
-        #start {
-            background: #222;
-            color: white;
-        }
+.box {
+    background: white;
+    padding: 20px;
+    margin-top: 15px;
+    border-radius: 12px;
+}
 
-        .box {
-            background: white;
-            padding: 20px;
-            margin-top: 20px;
-            border-radius: 12px;
-        }
+textarea {
+    width: 100%;
+    height: 180px;
+    font-size: 18px;
+    padding: 12px;
+    box-sizing: border-box;
+}
 
-        #result {
-            font-size: 20px;
-            line-height: 1.6;
-        }
+button {
+    padding: 12px 18px;
+    margin: 6px;
+    font-size: 17px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+}
 
-        #score {
-            text-align: center;
-            font-size: 40px;
-            font-weight: bold;
-        }
-    </style>
+#loadButton {
+    background: #222;
+    color: white;
+}
+
+#start {
+    background: #222;
+    color: white;
+}
+
+.navigation {
+    text-align: center;
+}
+
+#sentence {
+    font-size: 24px;
+    line-height: 1.5;
+    font-weight: bold;
+}
+
+#result {
+    font-size: 20px;
+    line-height: 1.5;
+}
+
+#score {
+    text-align: center;
+    font-size: 40px;
+    font-weight: bold;
+}
+
+</style>
 </head>
+
 
 <body>
 
 <h1>English Reader</h1>
 
+
+<!-- NHẬP BÀI -->
+
 <div class="box">
 
-    <h3>Câu mẫu</h3>
+<h3>1. Nhập bài</h3>
 
-    <textarea id="original">
-The first print ran to only 3,000 copies.
-    </textarea>
+<textarea id="article">
 
-    <button id="start">🎤 Bắt đầu đọc</button>
+The first print ran to only 3,000 copies. But the fruit book has been remarkably influential. It is used by local people to learn about the trees around them.
+
+</textarea>
+
+<br>
+
+<button id="loadButton">
+Nạp bài
+</button>
 
 </div>
 
+
+<!-- CÂU HIỆN TẠI -->
+
 <div class="box">
 
-    <h3>Anh đã đọc</h3>
+<div style="text-align:center;">
+    <span id="counter">Chưa có bài</span>
+</div>
 
-    <div id="result">
-        Chưa đọc...
-    </div>
+<br>
+
+<div id="sentence">
+Hãy nạp bài trước.
+</div>
+
+<br>
+
+<button id="start">
+🎤 Đọc câu này
+</button>
 
 </div>
 
+
+<!-- KẾT QUẢ -->
+
 <div class="box">
 
-    <div id="score">
-        -
-    </div>
+<h3>Anh đã đọc:</h3>
+
+<div id="result">
+Chưa đọc...
+</div>
+
+<br>
+
+<div id="score">
+-
+</div>
+
+</div>
+
+
+<!-- ĐIỀU HƯỚNG -->
+
+<div class="box navigation">
+
+<button id="previous">
+⬅ Câu trước
+</button>
+
+<button id="next">
+Câu tiếp ➡
+</button>
 
 </div>
 
 
 <script>
 
-const startButton = document.getElementById("start");
-const originalText = document.getElementById("original");
-const result = document.getElementById("result");
-const score = document.getElementById("score");
+
+// =============================
+// BIẾN
+// =============================
+
+let sentences = [];
+
+let currentSentence = 0;
 
 
-// Kiểm tra trình duyệt có Speech Recognition không
+// =============================
+// NHẬN DIỆN GIỌNG NÓI
+// =============================
+
 const SpeechRecognition =
     window.SpeechRecognition ||
     window.webkitSpeechRecognition;
 
-if (!SpeechRecognition) {
+const recognition =
+    SpeechRecognition
+    ? new SpeechRecognition()
+    : null;
 
-    alert("Trình duyệt không hỗ trợ nhận diện giọng nói.");
 
-} else {
-
-    const recognition = new SpeechRecognition();
+if (recognition) {
 
     recognition.lang = "en-US";
 
@@ -123,50 +196,193 @@ if (!SpeechRecognition) {
 
     recognition.interimResults = false;
 
-
-    startButton.onclick = function() {
-
-        result.innerHTML = "🎧 Đang nghe...";
-
-        score.innerHTML = "...";
-
-        recognition.start();
-
-    };
+}
 
 
-    recognition.onresult = function(event) {
+// =============================
+// CÁC ELEMENT
+// =============================
 
-        const spokenText =
-            event.results[0][0].transcript;
+const article =
+    document.getElementById("article");
 
-        result.innerHTML =
-            spokenText;
+const loadButton =
+    document.getElementById("loadButton");
 
-        calculateScore(
-            originalText.value,
-            spokenText
-        );
+const sentence =
+    document.getElementById("sentence");
 
-    };
+const counter =
+    document.getElementById("counter");
+
+const startButton =
+    document.getElementById("start");
+
+const result =
+    document.getElementById("result");
+
+const score =
+    document.getElementById("score");
+
+const previousButton =
+    document.getElementById("previous");
+
+const nextButton =
+    document.getElementById("next");
 
 
-    recognition.onerror = function(event) {
+// =============================
+// NẠP BÀI
+// =============================
 
-        result.innerHTML =
-            "Không nhận được giọng nói: " +
-            event.error;
+loadButton.onclick = function() {
 
-    };
+    const text = article.value.trim();
+
+    if (!text) {
+
+        alert("Anh chưa nhập bài.");
+
+        return;
+    }
+
+
+    // Tách câu
+    sentences = text
+        .replace(/\n+/g, " ")
+        .match(/[^.!?]+[.!?]+/g);
+
+
+    if (!sentences) {
+
+        alert("Không tìm thấy câu.");
+
+        return;
+    }
+
+
+    sentences =
+        sentences.map(function(s) {
+
+            return s.trim();
+
+        });
+
+
+    currentSentence = 0;
+
+    showSentence();
+
+};
+
+
+// =============================
+// HIỂN THỊ CÂU
+// =============================
+
+function showSentence() {
+
+    if (sentences.length === 0) {
+
+        return;
+    }
+
+
+    sentence.innerHTML =
+        sentences[currentSentence];
+
+
+    counter.innerHTML =
+        "Câu " +
+        (currentSentence + 1) +
+        " / " +
+        sentences.length;
+
+
+    result.innerHTML =
+        "Chưa đọc...";
+
+
+    score.innerHTML =
+        "-";
 
 }
 
 
-// Chấm điểm
+// =============================
+// ĐỌC
+// =============================
+
+startButton.onclick = function() {
+
+    if (!recognition) {
+
+        alert(
+            "Trình duyệt không hỗ trợ nhận diện giọng nói."
+        );
+
+        return;
+    }
+
+
+    result.innerHTML =
+        "🎧 Đang nghe...";
+
+    score.innerHTML =
+        "...";
+
+
+    recognition.start();
+
+};
+
+
+// =============================
+// NHẬN KẾT QUẢ
+// =============================
+
+if (recognition) {
+
+    recognition.onresult =
+        function(event) {
+
+            const spokenText =
+                event.results[0][0].transcript;
+
+
+            result.innerHTML =
+                spokenText;
+
+
+            calculateScore(
+                sentences[currentSentence],
+                spokenText
+            );
+
+        };
+
+
+    recognition.onerror =
+        function(event) {
+
+            result.innerHTML =
+                "Lỗi: " +
+                event.error;
+
+        };
+
+}
+
+
+// =============================
+// CHẤM ĐIỂM
+// =============================
+
 function calculateScore(original, spoken) {
 
     const originalWords =
         normalize(original).split(" ");
+
 
     const spokenWords =
         normalize(spoken).split(" ");
@@ -175,20 +391,26 @@ function calculateScore(original, spoken) {
     let correct = 0;
 
 
-    originalWords.forEach(function(word, index) {
+    originalWords.forEach(
+        function(word, index) {
 
-        if (spokenWords[index] === word) {
+            if (
+                spokenWords[index] === word
+            ) {
 
-            correct++;
+                correct++;
+
+            }
 
         }
-
-    });
+    );
 
 
     let percentage =
         Math.round(
-            correct / originalWords.length * 100
+            correct /
+            originalWords.length *
+            100
         );
 
 
@@ -197,6 +419,10 @@ function calculateScore(original, spoken) {
 
 }
 
+
+// =============================
+// LÀM SẠCH TEXT
+// =============================
 
 function normalize(text) {
 
@@ -207,6 +433,58 @@ function normalize(text) {
         .trim();
 
 }
+
+
+// =============================
+// CÂU TRƯỚC
+// =============================
+
+previousButton.onclick =
+    function() {
+
+        if (sentences.length === 0) {
+
+            return;
+        }
+
+
+        if (currentSentence > 0) {
+
+            currentSentence--;
+
+            showSentence();
+
+        }
+
+    };
+
+
+// =============================
+// CÂU TIẾP
+// =============================
+
+nextButton.onclick =
+    function() {
+
+        if (sentences.length === 0) {
+
+            return;
+        }
+
+
+        if (
+            currentSentence <
+            sentences.length - 1
+        ) {
+
+            currentSentence++;
+
+            showSentence();
+
+        }
+
+    };
+
 
 </script>
 
