@@ -33,6 +33,18 @@ textarea {
     font-size: 18px;
     padding: 12px;
     box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+}
+
+input {
+    width: 100%;
+    padding: 12px;
+    font-size: 18px;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
 }
 
 button {
@@ -44,13 +56,19 @@ button {
     cursor: pointer;
 }
 
-#loadButton {
+#loadButton,
+#saveButton {
     background: #222;
     color: white;
 }
 
 #start {
     background: #222;
+    color: white;
+}
+
+#addButton {
+    background: #1976d2;
     color: white;
 }
 
@@ -75,6 +93,39 @@ button {
     font-weight: bold;
 }
 
+#articleList {
+    margin-top: 10px;
+}
+
+.article-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    margin-top: 8px;
+    background: #f1f1f1;
+    border-radius: 8px;
+}
+
+.article-name {
+    font-size: 17px;
+    font-weight: bold;
+    cursor: pointer;
+    flex: 1;
+}
+
+.delete-button {
+    background: #d32f2f;
+    color: white;
+    font-size: 14px;
+    padding: 8px 12px;
+}
+
+#savedMessage {
+    color: green;
+    font-weight: bold;
+}
+
 </style>
 </head>
 
@@ -84,11 +135,34 @@ button {
 <h1>English Reader</h1>
 
 
+<!-- ============================= -->
+<!-- BÀI CỦA TÔI -->
+<!-- ============================= -->
+
+<div class="box">
+
+<h3>📚 Bài của tôi</h3>
+
+<div id="articleList">
+    Chưa có bài nào.
+</div>
+
+</div>
+
+
+<!-- ============================= -->
 <!-- NHẬP BÀI -->
+<!-- ============================= -->
 
 <div class="box">
 
 <h3>1. Nhập bài</h3>
+
+<input
+    type="text"
+    id="articleTitle"
+    placeholder="Tên bài, ví dụ: Amazon Rainforest"
+/>
 
 <textarea id="article">
 
@@ -102,10 +176,22 @@ The first print ran to only 3,000 copies. But the fruit book has been remarkably
 Nạp bài
 </button>
 
+<button id="saveButton">
+💾 Lưu bài
+</button>
+
+<button id="addButton">
+➕ Bài mới
+</button>
+
+<div id="savedMessage"></div>
+
 </div>
 
 
+<!-- ============================= -->
 <!-- CÂU HIỆN TẠI -->
+<!-- ============================= -->
 
 <div class="box">
 
@@ -128,7 +214,9 @@ Hãy nạp bài trước.
 </div>
 
 
+<!-- ============================= -->
 <!-- KẾT QUẢ -->
+<!-- ============================= -->
 
 <div class="box">
 
@@ -147,7 +235,9 @@ Chưa đọc...
 </div>
 
 
+<!-- ============================= -->
 <!-- ĐIỀU HƯỚNG -->
+<!-- ============================= -->
 
 <div class="box navigation">
 
@@ -172,6 +262,8 @@ Câu tiếp ➡
 let sentences = [];
 
 let currentSentence = 0;
+
+let currentArticleId = null;
 
 
 // =============================
@@ -200,14 +292,29 @@ if (recognition) {
 
 
 // =============================
-// CÁC ELEMENT
+// ELEMENT
 // =============================
 
 const article =
     document.getElementById("article");
 
+const articleTitle =
+    document.getElementById("articleTitle");
+
 const loadButton =
     document.getElementById("loadButton");
+
+const saveButton =
+    document.getElementById("saveButton");
+
+const addButton =
+    document.getElementById("addButton");
+
+const articleList =
+    document.getElementById("articleList");
+
+const savedMessage =
+    document.getElementById("savedMessage");
 
 const sentence =
     document.getElementById("sentence");
@@ -232,48 +339,309 @@ const nextButton =
 
 
 // =============================
-// NẠP BÀI
+// LẤY DANH SÁCH BÀI
 // =============================
 
-loadButton.onclick = function() {
+function getArticles() {
 
-    const text = article.value.trim();
+    return JSON.parse(
+        localStorage.getItem("englishReaderArticles") || "[]"
+    );
+
+}
+
+
+// =============================
+// LƯU DANH SÁCH BÀI
+// =============================
+
+function saveArticles(articles) {
+
+    localStorage.setItem(
+        "englishReaderArticles",
+        JSON.stringify(articles)
+    );
+
+}
+
+
+// =============================
+// HIỂN THỊ DANH SÁCH BÀI
+// =============================
+
+function renderArticleList() {
+
+    const articles = getArticles();
+
+    articleList.innerHTML = "";
+
+    if (articles.length === 0) {
+
+        articleList.innerHTML =
+            "Chưa có bài nào.";
+
+        return;
+    }
+
+
+    articles.forEach(function(item) {
+
+        const div =
+            document.createElement("div");
+
+        div.className =
+            "article-item";
+
+
+        const name =
+            document.createElement("div");
+
+        name.className =
+            "article-name";
+
+        name.innerHTML =
+            "📖 " + item.title;
+
+
+        name.onclick =
+            function() {
+
+                loadSavedArticle(item.id);
+
+            };
+
+
+        const deleteButton =
+            document.createElement("button");
+
+        deleteButton.className =
+            "delete-button";
+
+        deleteButton.innerHTML =
+            "🗑️ Xóa";
+
+
+        deleteButton.onclick =
+            function(event) {
+
+                event.stopPropagation();
+
+                deleteArticle(item.id);
+
+            };
+
+
+        div.appendChild(name);
+
+        div.appendChild(deleteButton);
+
+        articleList.appendChild(div);
+
+    });
+
+}
+
+
+// =============================
+// LƯU BÀI
+// =============================
+
+saveButton.onclick =
+    function() {
+
+        const title =
+            articleTitle.value.trim();
+
+        const text =
+            article.value.trim();
+
+
+        if (!title) {
+
+            alert("Anh chưa nhập tên bài.");
+
+            return;
+
+        }
+
+
+        if (!text) {
+
+            alert("Anh chưa nhập nội dung bài.");
+
+            return;
+
+        }
+
+
+        const articles =
+            getArticles();
+
+
+        // Nếu đang sửa bài cũ
+        if (currentArticleId) {
+
+            const index =
+                articles.findIndex(
+                    function(item) {
+
+                        return item.id === currentArticleId;
+
+                    }
+                );
+
+
+            if (index !== -1) {
+
+                articles[index].title =
+                    title;
+
+                articles[index].text =
+                    text;
+
+                articles[index].currentSentence =
+                    currentSentence;
+
+            }
+
+        }
+
+        // Nếu là bài mới
+        else {
+
+            const newArticle = {
+
+                id:
+                    Date.now(),
+
+                title:
+                    title,
+
+                text:
+                    text,
+
+                currentSentence:
+                    currentSentence
+
+            };
+
+
+            currentArticleId =
+                newArticle.id;
+
+
+            articles.push(
+                newArticle
+            );
+
+        }
+
+
+        saveArticles(articles);
+
+        renderArticleList();
+
+
+        savedMessage.innerHTML =
+            "✅ Đã lưu bài";
+
+
+        setTimeout(
+            function() {
+
+                savedMessage.innerHTML = "";
+
+            },
+            2000
+        );
+
+    };
+
+
+// =============================
+// NẠP BÀI TỪ TEXTAREA
+// =============================
+
+loadButton.onclick =
+    function() {
+
+        loadArticleText(
+            article.value,
+            0
+        );
+
+    };
+
+
+// =============================
+// XỬ LÝ NỘI DUNG BÀI
+// =============================
+
+function loadArticleText(
+    text,
+    startSentence
+) {
+
+    text =
+        text.trim();
+
 
     if (!text) {
 
-        alert("Anh chưa nhập bài.");
+        alert(
+            "Anh chưa nhập bài."
+        );
 
         return;
+
     }
 
 
     // Tách câu
-    sentences = text
+    const foundSentences =
+        text
         .replace(/\n+/g, " ")
-        .match(/[^.!?]+[.!?]+/g);
+        .match(/[^.!?]+[.!?]+|[^.!?]+$/g);
 
 
-    if (!sentences) {
+    if (!foundSentences) {
 
-        alert("Không tìm thấy câu.");
+        alert(
+            "Không tìm thấy câu."
+        );
 
         return;
+
     }
 
 
     sentences =
-        sentences.map(function(s) {
+        foundSentences.map(
+            function(s) {
 
-            return s.trim();
+                return s.trim();
 
-        });
+            }
+        );
 
 
-    currentSentence = 0;
+    if (
+        startSentence < 0 ||
+        startSentence >= sentences.length
+    ) {
+
+        startSentence = 0;
+
+    }
+
+
+    currentSentence =
+        startSentence;
+
 
     showSentence();
 
-};
+}
 
 
 // =============================
@@ -285,6 +653,7 @@ function showSentence() {
     if (sentences.length === 0) {
 
         return;
+
     }
 
 
@@ -306,35 +675,269 @@ function showSentence() {
     score.innerHTML =
         "-";
 
+
+    // Nhớ vị trí câu đang học
+    saveCurrentPosition();
+
 }
+
+
+// =============================
+// LƯU VỊ TRÍ CÂU
+// =============================
+
+function saveCurrentPosition() {
+
+    if (!currentArticleId) {
+
+        return;
+
+    }
+
+
+    const articles =
+        getArticles();
+
+
+    const index =
+        articles.findIndex(
+            function(item) {
+
+                return item.id === currentArticleId;
+
+            }
+        );
+
+
+    if (index !== -1) {
+
+        articles[index].currentSentence =
+            currentSentence;
+
+        saveArticles(articles);
+
+    }
+
+}
+
+
+// =============================
+// TẢI BÀI ĐÃ LƯU
+// =============================
+
+function loadSavedArticle(id) {
+
+    const articles =
+        getArticles();
+
+
+    const item =
+        articles.find(
+            function(article) {
+
+                return article.id === id;
+
+            }
+        );
+
+
+    if (!item) {
+
+        return;
+
+    }
+
+
+    currentArticleId =
+        item.id;
+
+
+    articleTitle.value =
+        item.title;
+
+
+    article.value =
+        item.text;
+
+
+    loadArticleText(
+        item.text,
+        item.currentSentence || 0
+    );
+
+
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
+
+}
+
+
+// =============================
+// XÓA BÀI
+// =============================
+
+function deleteArticle(id) {
+
+    const articles =
+        getArticles();
+
+
+    const item =
+        articles.find(
+            function(article) {
+
+                return article.id === id;
+
+            }
+        );
+
+
+    if (!item) {
+
+        return;
+
+    }
+
+
+    const confirmed =
+        confirm(
+            'Xóa bài "' +
+            item.title +
+            '"?'
+        );
+
+
+    if (!confirmed) {
+
+        return;
+
+    }
+
+
+    const newArticles =
+        articles.filter(
+            function(article) {
+
+                return article.id !== id;
+
+            }
+        );
+
+
+    saveArticles(
+        newArticles
+    );
+
+
+    if (currentArticleId === id) {
+
+        currentArticleId = null;
+
+        articleTitle.value = "";
+
+    }
+
+
+    renderArticleList();
+
+}
+
+
+// =============================
+// BÀI MỚI
+// =============================
+
+addButton.onclick =
+    function() {
+
+        currentArticleId =
+            null;
+
+        articleTitle.value =
+            "";
+
+        article.value =
+            "";
+
+        sentences = [];
+
+        currentSentence = 0;
+
+
+        counter.innerHTML =
+            "Chưa có bài";
+
+
+        sentence.innerHTML =
+            "Hãy nhập bài mới.";
+
+
+        result.innerHTML =
+            "Chưa đọc...";
+
+
+        score.innerHTML =
+            "-";
+
+
+        savedMessage.innerHTML =
+            "";
+
+        articleTitle.focus();
+
+    };
 
 
 // =============================
 // ĐỌC
 // =============================
 
-startButton.onclick = function() {
+startButton.onclick =
+    function() {
 
-    if (!recognition) {
+        if (!recognition) {
 
-        alert(
-            "Trình duyệt không hỗ trợ nhận diện giọng nói."
-        );
+            alert(
+                "Trình duyệt không hỗ trợ nhận diện giọng nói."
+            );
 
-        return;
-    }
+            return;
 
-
-    result.innerHTML =
-        "🎧 Đang nghe...";
-
-    score.innerHTML =
-        "...";
+        }
 
 
-    recognition.start();
+        if (sentences.length === 0) {
 
-};
+            alert(
+                "Anh hãy nạp bài trước."
+            );
+
+            return;
+
+        }
+
+
+        result.innerHTML =
+            "🎧 Đang nghe...";
+
+
+        score.innerHTML =
+            "...";
+
+
+        try {
+
+            recognition.start();
+
+        } catch (error) {
+
+            console.log(error);
+
+        }
+
+    };
 
 
 // =============================
@@ -378,7 +981,10 @@ if (recognition) {
 // CHẤM ĐIỂM
 // =============================
 
-function calculateScore(original, spoken) {
+function calculateScore(
+    original,
+    spoken
+) {
 
     const originalWords =
         normalize(original).split(" ");
@@ -445,6 +1051,7 @@ previousButton.onclick =
         if (sentences.length === 0) {
 
             return;
+
         }
 
 
@@ -469,6 +1076,7 @@ nextButton.onclick =
         if (sentences.length === 0) {
 
             return;
+
         }
 
 
@@ -484,6 +1092,37 @@ nextButton.onclick =
         }
 
     };
+
+
+// =============================
+// KHỞI ĐỘNG
+// =============================
+
+renderArticleList();
+
+
+// =============================
+// TỰ ĐỘNG KHÔI PHỤC BÀI CUỐI
+// =============================
+
+const lastArticleId =
+    localStorage.getItem(
+        "englishReaderLastArticle"
+    );
+
+
+if (lastArticleId) {
+
+    loadSavedArticle(
+        Number(lastArticleId)
+    );
+
+}
+
+
+// Khi chọn bài, nhớ bài cuối cùng
+const originalLoadSavedArticle =
+    loadSavedArticle;
 
 
 </script>
