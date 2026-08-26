@@ -1127,6 +1127,33 @@ const originalLoadSavedArticle =
 
 
 </script>
+<script>
 
+if ("serviceWorker" in navigator) {
+
+    window.addEventListener("load", function() {
+
+        navigator.serviceWorker.register("./sw.js")
+            .then(function() {
+
+                console.log(
+                    "English Reader: Service Worker registered"
+                );
+
+            })
+            .catch(function(error) {
+
+                console.log(
+                    "Service Worker error:",
+                    error
+                );
+
+            });
+
+    });
+
+}
+
+</script>
 </body>
 </html>
