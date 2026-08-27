@@ -68,6 +68,11 @@ button {
     cursor: pointer;
 }
 
+button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
 #loadButton,
 #saveButton,
 #start {
@@ -83,6 +88,12 @@ button {
 
 #addButton {
     background: #388e3c;
+    color: white;
+}
+
+#previous,
+#next {
+    background: #555;
     color: white;
 }
 
@@ -149,6 +160,47 @@ button {
 .image-buttons {
     text-align: center;
     margin-top: 10px;
+}
+
+.practice-settings {
+    background: #f7f7f7;
+    padding: 15px;
+    border-radius: 10px;
+    margin-top: 15px;
+}
+
+.practice-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.practice-row label {
+    font-size: 17px;
+    font-weight: bold;
+}
+
+#modeToggle {
+    background: #d32f2f;
+    color: white;
+    min-width: 110px;
+}
+
+#modeToggle.on {
+    background: #388e3c;
+}
+
+#scoreSelect {
+    padding: 10px;
+    font-size: 17px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+
+#practiceStatus {
+    margin-top: 10px;
+    font-weight: bold;
 }
 
 </style>
@@ -259,6 +311,54 @@ Nạp bài
 
 
 <!-- ============================= -->
+<!-- CHẾ ĐỘ LUYỆN -->
+<!-- ============================= -->
+
+<div class="box">
+
+<h3>🎯 Chế độ luyện</h3>
+
+<div class="practice-settings">
+
+<div class="practice-row">
+
+<label>
+Chế độ đạt điểm:
+</label>
+
+<button id="modeToggle">
+🔴 Tắt
+</button>
+
+<label>
+Điểm tối thiểu:
+</label>
+
+<select id="scoreSelect">
+
+<option value="70">70</option>
+<option value="75">75</option>
+<option value="80">80</option>
+<option value="85" selected>85</option>
+<option value="90">90</option>
+<option value="95">95</option>
+<option value="100">100</option>
+
+</select>
+
+</div>
+
+
+<div id="practiceStatus">
+Chế độ đang tắt.
+</div>
+
+</div>
+
+</div>
+
+
+<!-- ============================= -->
 <!-- CÂU HIỆN TẠI -->
 <!-- ============================= -->
 
@@ -353,6 +453,20 @@ let sentences = [];
 let currentSentence = 0;
 
 let currentArticleId = null;
+
+let currentScore = null;
+
+let practiceMode =
+    localStorage.getItem(
+        "helloEnglishPracticeMode"
+    ) === "true";
+
+let minimumScore =
+    Number(
+        localStorage.getItem(
+            "helloEnglishMinimumScore"
+        ) || 85
+    );
 
 
 // =============================
@@ -461,6 +575,18 @@ const ocrStatus =
     document.getElementById("ocrStatus");
 
 
+const modeToggle =
+    document.getElementById("modeToggle");
+
+
+const scoreSelect =
+    document.getElementById("scoreSelect");
+
+
+const practiceStatus =
+    document.getElementById("practiceStatus");
+
+
 // =============================
 // LẤY DANH SÁCH BÀI
 // =============================
@@ -486,6 +612,178 @@ function saveArticles(articles) {
         "helloEnglishArticles",
         JSON.stringify(articles)
     );
+
+}
+
+
+// =============================
+// HIỂN THỊ CHẾ ĐỘ
+// =============================
+
+function updatePracticeUI() {
+
+    scoreSelect.value =
+        String(minimumScore);
+
+
+    if (practiceMode) {
+
+        modeToggle.innerHTML =
+            "🟢 Bật";
+
+        modeToggle.classList.add(
+            "on"
+        );
+
+        practiceStatus.innerHTML =
+            "🔒 Đang bật: phải đạt " +
+            minimumScore +
+            "/100 mới được sang câu tiếp.";
+
+    }
+
+    else {
+
+        modeToggle.innerHTML =
+            "🔴 Tắt";
+
+        modeToggle.classList.remove(
+            "on"
+        );
+
+        practiceStatus.innerHTML =
+            "Chế độ đang tắt. Anh có thể sang câu tiếp bất cứ lúc nào.";
+
+    }
+
+
+    updateNextButton();
+
+}
+
+
+// =============================
+// BẬT / TẮT CHẾ ĐỘ
+// =============================
+
+modeToggle.onclick =
+    function() {
+
+        practiceMode =
+            !practiceMode;
+
+
+        localStorage.setItem(
+            "helloEnglishPracticeMode",
+            String(practiceMode)
+        );
+
+
+        updatePracticeUI();
+
+    };
+
+
+// =============================
+// CHỌN ĐIỂM
+// =============================
+
+scoreSelect.onchange =
+    function() {
+
+        minimumScore =
+            Number(
+                scoreSelect.value
+            );
+
+
+        localStorage.setItem(
+            "helloEnglishMinimumScore",
+            String(minimumScore)
+        );
+
+
+        updatePracticeUI();
+
+    };
+
+
+// =============================
+// KIỂM TRA CÓ ĐƯỢC SANG CÂU
+// =============================
+
+function canGoNext() {
+
+    // Nếu chế độ tắt
+    if (!practiceMode) {
+
+        return true;
+
+    }
+
+
+    // Nếu đang ở câu cuối
+    if (
+        currentSentence >=
+        sentences.length - 1
+    ) {
+
+        return true;
+
+    }
+
+
+    // Phải có điểm
+    if (
+        currentScore === null
+    ) {
+
+        return false;
+
+    }
+
+
+    return (
+        currentScore >=
+        minimumScore
+    );
+
+}
+
+
+// =============================
+// KHÓA / MỞ NÚT CÂU TIẾP
+// =============================
+
+function updateNextButton() {
+
+    if (
+        sentences.length === 0
+    ) {
+
+        nextButton.disabled =
+            true;
+
+        return;
+
+    }
+
+
+    if (
+        currentSentence >=
+        sentences.length - 1
+    ) {
+
+        nextButton.disabled =
+            true;
+
+        return;
+
+    }
+
+
+    nextButton.disabled =
+        !canGoNext();
 
 }
 
@@ -794,6 +1092,10 @@ function loadArticleText(
         startSentence;
 
 
+    currentScore =
+        null;
+
+
     showSentence();
 
 }
@@ -829,6 +1131,13 @@ function showSentence() {
 
     score.innerHTML =
         "-";
+
+
+    currentScore =
+        null;
+
+
+    updateNextButton();
 
 
     saveCurrentPosition();
@@ -1048,6 +1357,8 @@ addButton.onclick =
 
         currentSentence = 0;
 
+        currentScore = null;
+
 
         counter.innerHTML =
             "Chưa có bài";
@@ -1071,6 +1382,9 @@ addButton.onclick =
 
         ocrStatus.innerHTML =
             "";
+
+
+        updateNextButton();
 
 
         articleTitle.focus();
@@ -1219,14 +1533,9 @@ async function processImages(files) {
         }
 
 
-        // Đưa toàn bộ kết quả OCR vào bài
-
         article.value =
             allText;
 
-
-        // Nếu chưa có tên bài
-        // lấy tên ảnh đầu tiên
 
         if (
             !articleTitle.value.trim()
@@ -1461,8 +1770,81 @@ function calculateScore(
         );
 
 
+    currentScore =
+        percentage;
+
+
     score.innerHTML =
         percentage + "/100";
+
+
+    // =============================
+    // XỬ LÝ CHẾ ĐỘ ĐẠT ĐIỂM
+    // =============================
+
+    if (practiceMode) {
+
+        if (
+            percentage >=
+            minimumScore
+        ) {
+
+            practiceStatus.innerHTML =
+                "✅ Đạt " +
+                percentage +
+                "/100 — đủ " +
+                minimumScore +
+                ". Có thể sang câu tiếp!";
+
+
+            updateNextButton();
+
+
+            // Tự động sang câu tiếp
+            if (
+                currentSentence <
+                sentences.length - 1
+            ) {
+
+                setTimeout(
+                    function() {
+
+                        currentSentence++;
+
+                        currentScore =
+                            null;
+
+                        showSentence();
+
+                    },
+                    800
+                );
+
+            }
+
+        }
+
+        else {
+
+            practiceStatus.innerHTML =
+                "❌ " +
+                percentage +
+                "/100 — chưa đạt " +
+                minimumScore +
+                ". Anh đọc lại câu này nhé.";
+
+
+            updateNextButton();
+
+        }
+
+    }
+
+    else {
+
+        updateNextButton();
+
+    }
 
 }
 
@@ -1515,6 +1897,10 @@ previousButton.onclick =
             currentSentence--;
 
 
+            currentScore =
+                null;
+
+
             showSentence();
 
         }
@@ -1539,16 +1925,34 @@ nextButton.onclick =
 
 
         if (
-            currentSentence <
+            currentSentence >=
             sentences.length - 1
         ) {
 
-            currentSentence++;
-
-
-            showSentence();
+            return;
 
         }
+
+
+        if (!canGoNext()) {
+
+            practiceStatus.innerHTML =
+                "🔒 Anh phải đạt ít nhất " +
+                minimumScore +
+                "/100 mới được sang câu tiếp.";
+
+            return;
+
+        }
+
+
+        currentSentence++;
+
+        currentScore =
+            null;
+
+
+        showSentence();
 
     };
 
@@ -1558,6 +1962,8 @@ nextButton.onclick =
 // =============================
 
 renderArticleList();
+
+updatePracticeUI();
 
 
 // =============================
