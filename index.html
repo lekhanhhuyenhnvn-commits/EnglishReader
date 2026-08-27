@@ -1,12 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>English Reader</title>
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>Hello English</title>
+
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#222222">
+
+<meta name="theme-color"
+      content="#222222">
+
 <style>
 
 body {
@@ -38,7 +45,7 @@ textarea {
     border-radius: 8px;
 }
 
-input {
+input[type="text"] {
     width: 100%;
     padding: 12px;
     font-size: 18px;
@@ -46,6 +53,10 @@ input {
     margin-bottom: 10px;
     border: 1px solid #ccc;
     border-radius: 8px;
+}
+
+input[type="file"] {
+    display: none;
 }
 
 button {
@@ -58,18 +69,19 @@ button {
 }
 
 #loadButton,
-#saveButton {
-    background: #222;
-    color: white;
-}
-
+#saveButton,
 #start {
     background: #222;
     color: white;
 }
 
-#addButton {
+#ocrButton {
     background: #1976d2;
+    color: white;
+}
+
+#addButton {
+    background: #388e3c;
     color: white;
 }
 
@@ -127,13 +139,20 @@ button {
     font-weight: bold;
 }
 
+#ocrStatus {
+    margin-top: 10px;
+    font-weight: bold;
+}
+
 </style>
+
 </head>
 
 
 <body>
 
-<h1>English Reader</h1>
+
+<h1>Hello English</h1>
 
 
 <!-- ============================= -->
@@ -163,7 +182,8 @@ button {
     type="text"
     id="articleTitle"
     placeholder="Tên bài, ví dụ: Amazon Rainforest"
-/>
+>
+
 
 <textarea id="article">
 
@@ -173,17 +193,44 @@ The first print ran to only 3,000 copies. But the fruit book has been remarkably
 
 <br>
 
+
 <button id="loadButton">
 Nạp bài
 </button>
+
 
 <button id="saveButton">
 💾 Lưu bài
 </button>
 
+
 <button id="addButton">
 ➕ Bài mới
 </button>
+
+
+<br>
+
+
+<!-- ============================= -->
+<!-- OCR -->
+<!-- ============================= -->
+
+<input
+    type="file"
+    id="imageInput"
+    accept="image/*"
+    capture="environment"
+>
+
+
+<button id="ocrButton">
+📷 Nạp bài bằng ảnh
+</button>
+
+
+<div id="ocrStatus"></div>
+
 
 <div id="savedMessage"></div>
 
@@ -197,16 +244,24 @@ Nạp bài
 <div class="box">
 
 <div style="text-align:center;">
-    <span id="counter">Chưa có bài</span>
+
+<span id="counter">
+Chưa có bài
+</span>
+
 </div>
 
+
 <br>
+
 
 <div id="sentence">
 Hãy nạp bài trước.
 </div>
 
+
 <br>
+
 
 <button id="start">
 🎤 Đọc câu này
@@ -223,11 +278,14 @@ Hãy nạp bài trước.
 
 <h3>Anh đã đọc:</h3>
 
+
 <div id="result">
 Chưa đọc...
 </div>
 
+
 <br>
+
 
 <div id="score">
 -
@@ -246,11 +304,20 @@ Chưa đọc...
 ⬅ Câu trước
 </button>
 
+
 <button id="next">
 Câu tiếp ➡
 </button>
 
 </div>
+
+
+<!-- ============================= -->
+<!-- TESSERACT OCR -->
+<!-- ============================= -->
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js">
+</script>
 
 
 <script>
@@ -274,6 +341,7 @@ let currentArticleId = null;
 const SpeechRecognition =
     window.SpeechRecognition ||
     window.webkitSpeechRecognition;
+
 
 const recognition =
     SpeechRecognition
@@ -299,44 +367,69 @@ if (recognition) {
 const article =
     document.getElementById("article");
 
+
 const articleTitle =
     document.getElementById("articleTitle");
+
 
 const loadButton =
     document.getElementById("loadButton");
 
+
 const saveButton =
     document.getElementById("saveButton");
+
 
 const addButton =
     document.getElementById("addButton");
 
+
 const articleList =
     document.getElementById("articleList");
+
 
 const savedMessage =
     document.getElementById("savedMessage");
 
+
 const sentence =
     document.getElementById("sentence");
+
 
 const counter =
     document.getElementById("counter");
 
+
 const startButton =
     document.getElementById("start");
+
 
 const result =
     document.getElementById("result");
 
+
 const score =
     document.getElementById("score");
+
 
 const previousButton =
     document.getElementById("previous");
 
+
 const nextButton =
     document.getElementById("next");
+
+
+const ocrButton =
+    document.getElementById("ocrButton");
+
+
+const imageInput =
+    document.getElementById("imageInput");
+
+
+const ocrStatus =
+    document.getElementById("ocrStatus");
 
 
 // =============================
@@ -346,7 +439,9 @@ const nextButton =
 function getArticles() {
 
     return JSON.parse(
-        localStorage.getItem("englishReaderArticles") || "[]"
+        localStorage.getItem(
+            "helloEnglishArticles"
+        ) || "[]"
     );
 
 }
@@ -359,7 +454,7 @@ function getArticles() {
 function saveArticles(articles) {
 
     localStorage.setItem(
-        "englishReaderArticles",
+        "helloEnglishArticles",
         JSON.stringify(articles)
     );
 
@@ -367,14 +462,17 @@ function saveArticles(articles) {
 
 
 // =============================
-// HIỂN THỊ DANH SÁCH BÀI
+// HIỂN THỊ DANH SÁCH
 // =============================
 
 function renderArticleList() {
 
-    const articles = getArticles();
+    const articles =
+        getArticles();
+
 
     articleList.innerHTML = "";
+
 
     if (articles.length === 0) {
 
@@ -382,63 +480,76 @@ function renderArticleList() {
             "Chưa có bài nào.";
 
         return;
+
     }
 
 
-    articles.forEach(function(item) {
+    articles.forEach(
+        function(item) {
 
-        const div =
-            document.createElement("div");
+            const div =
+                document.createElement("div");
 
-        div.className =
-            "article-item";
-
-
-        const name =
-            document.createElement("div");
-
-        name.className =
-            "article-name";
-
-        name.innerHTML =
-            "📖 " + item.title;
+            div.className =
+                "article-item";
 
 
-        name.onclick =
-            function() {
+            const name =
+                document.createElement("div");
 
-                loadSavedArticle(item.id);
-
-            };
-
-
-        const deleteButton =
-            document.createElement("button");
-
-        deleteButton.className =
-            "delete-button";
-
-        deleteButton.innerHTML =
-            "🗑️ Xóa";
+            name.className =
+                "article-name";
 
 
-        deleteButton.onclick =
-            function(event) {
-
-                event.stopPropagation();
-
-                deleteArticle(item.id);
-
-            };
+            name.innerHTML =
+                "📖 " + item.title;
 
 
-        div.appendChild(name);
+            name.onclick =
+                function() {
 
-        div.appendChild(deleteButton);
+                    loadSavedArticle(
+                        item.id
+                    );
 
-        articleList.appendChild(div);
+                };
 
-    });
+
+            const deleteButton =
+                document.createElement("button");
+
+
+            deleteButton.className =
+                "delete-button";
+
+
+            deleteButton.innerHTML =
+                "🗑️ Xóa";
+
+
+            deleteButton.onclick =
+                function(event) {
+
+                    event.stopPropagation();
+
+                    deleteArticle(
+                        item.id
+                    );
+
+                };
+
+
+            div.appendChild(name);
+
+            div.appendChild(
+                deleteButton
+            );
+
+
+            articleList.appendChild(div);
+
+        }
+    );
 
 }
 
@@ -453,13 +564,16 @@ saveButton.onclick =
         const title =
             articleTitle.value.trim();
 
+
         const text =
             article.value.trim();
 
 
         if (!title) {
 
-            alert("Anh chưa nhập tên bài.");
+            alert(
+                "Anh chưa nhập tên bài."
+            );
 
             return;
 
@@ -468,7 +582,9 @@ saveButton.onclick =
 
         if (!text) {
 
-            alert("Anh chưa nhập nội dung bài.");
+            alert(
+                "Anh chưa nhập nội dung bài."
+            );
 
             return;
 
@@ -479,14 +595,16 @@ saveButton.onclick =
             getArticles();
 
 
-        // Nếu đang sửa bài cũ
         if (currentArticleId) {
 
             const index =
                 articles.findIndex(
                     function(item) {
 
-                        return item.id === currentArticleId;
+                        return (
+                            item.id ===
+                            currentArticleId
+                        );
 
                     }
                 );
@@ -507,19 +625,15 @@ saveButton.onclick =
 
         }
 
-        // Nếu là bài mới
         else {
 
             const newArticle = {
 
-                id:
-                    Date.now(),
+                id: Date.now(),
 
-                title:
-                    title,
+                title: title,
 
-                text:
-                    text,
+                text: text,
 
                 currentSentence:
                     currentSentence
@@ -538,7 +652,16 @@ saveButton.onclick =
         }
 
 
-        saveArticles(articles);
+        saveArticles(
+            articles
+        );
+
+
+        localStorage.setItem(
+            "helloEnglishLastArticle",
+            String(currentArticleId)
+        );
+
 
         renderArticleList();
 
@@ -550,7 +673,8 @@ saveButton.onclick =
         setTimeout(
             function() {
 
-                savedMessage.innerHTML = "";
+                savedMessage.innerHTML =
+                    "";
 
             },
             2000
@@ -560,7 +684,7 @@ saveButton.onclick =
 
 
 // =============================
-// NẠP BÀI TỪ TEXTAREA
+// NẠP BÀI
 // =============================
 
 loadButton.onclick =
@@ -575,7 +699,7 @@ loadButton.onclick =
 
 
 // =============================
-// XỬ LÝ NỘI DUNG BÀI
+// XỬ LÝ NỘI DUNG
 // =============================
 
 function loadArticleText(
@@ -598,11 +722,12 @@ function loadArticleText(
     }
 
 
-    // Tách câu
     const foundSentences =
         text
         .replace(/\n+/g, " ")
-        .match(/[^.!?]+[.!?]+|[^.!?]+$/g);
+        .match(
+            /[^.!?]+[.!?]+|[^.!?]+$/g
+        );
 
 
     if (!foundSentences) {
@@ -677,14 +802,13 @@ function showSentence() {
         "-";
 
 
-    // Nhớ vị trí câu đang học
     saveCurrentPosition();
 
 }
 
 
 // =============================
-// LƯU VỊ TRÍ CÂU
+// NHỚ VỊ TRÍ CÂU
 // =============================
 
 function saveCurrentPosition() {
@@ -704,7 +828,10 @@ function saveCurrentPosition() {
         articles.findIndex(
             function(item) {
 
-                return item.id === currentArticleId;
+                return (
+                    item.id ===
+                    currentArticleId
+                );
 
             }
         );
@@ -715,7 +842,10 @@ function saveCurrentPosition() {
         articles[index].currentSentence =
             currentSentence;
 
-        saveArticles(articles);
+
+        saveArticles(
+            articles
+        );
 
     }
 
@@ -736,7 +866,9 @@ function loadSavedArticle(id) {
         articles.find(
             function(article) {
 
-                return article.id === id;
+                return (
+                    article.id === id
+                );
 
             }
         );
@@ -751,6 +883,12 @@ function loadSavedArticle(id) {
 
     currentArticleId =
         item.id;
+
+
+    localStorage.setItem(
+        "helloEnglishLastArticle",
+        String(item.id)
+    );
 
 
     articleTitle.value =
@@ -768,8 +906,11 @@ function loadSavedArticle(id) {
 
 
     window.scrollTo({
+
         top: 0,
+
         behavior: "smooth"
+
     });
 
 }
@@ -789,7 +930,9 @@ function deleteArticle(id) {
         articles.find(
             function(article) {
 
-                return article.id === id;
+                return (
+                    article.id === id
+                );
 
             }
         );
@@ -821,7 +964,9 @@ function deleteArticle(id) {
         articles.filter(
             function(article) {
 
-                return article.id !== id;
+                return (
+                    article.id !== id
+                );
 
             }
         );
@@ -832,11 +977,15 @@ function deleteArticle(id) {
     );
 
 
-    if (currentArticleId === id) {
+    if (
+        currentArticleId === id
+    ) {
 
-        currentArticleId = null;
+        currentArticleId =
+            null;
 
-        articleTitle.value = "";
+        articleTitle.value =
+            "";
 
     }
 
@@ -856,13 +1005,17 @@ addButton.onclick =
         currentArticleId =
             null;
 
+
         articleTitle.value =
             "";
+
 
         article.value =
             "";
 
+
         sentences = [];
+
 
         currentSentence = 0;
 
@@ -886,7 +1039,153 @@ addButton.onclick =
         savedMessage.innerHTML =
             "";
 
+
+        ocrStatus.innerHTML =
+            "";
+
+
         articleTitle.focus();
+
+    };
+
+
+// =============================
+// OCR - CHỌN ẢNH
+// =============================
+
+ocrButton.onclick =
+    function() {
+
+        imageInput.click();
+
+    };
+
+
+// =============================
+// OCR - NHẬN ẢNH
+// =============================
+
+imageInput.onchange =
+    async function() {
+
+        const file =
+            imageInput.files[0];
+
+
+        if (!file) {
+
+            return;
+
+        }
+
+
+        ocrStatus.innerHTML =
+            "🔍 Đang nhận dạng tiếng Anh...";
+
+
+        try {
+
+            const ocrResult =
+                await Tesseract.recognize(
+
+                    file,
+
+                    "eng",
+
+                    {
+
+                        logger:
+                            function(info) {
+
+                                if (
+                                    info.status ===
+                                    "recognizing text"
+                                ) {
+
+                                    const percent =
+                                        Math.round(
+                                            info.progress *
+                                            100
+                                        );
+
+
+                                    ocrStatus.innerHTML =
+                                        "🔍 Đang nhận dạng: " +
+                                        percent +
+                                        "%";
+
+                                }
+
+                            }
+
+                    }
+
+                );
+
+
+            const text =
+                ocrResult.data.text.trim();
+
+
+            if (!text) {
+
+                ocrStatus.innerHTML =
+                    "❌ Không nhận dạng được chữ.";
+
+
+                return;
+
+            }
+
+
+            // Đưa kết quả OCR vào ô bài
+
+            article.value =
+                text;
+
+
+            // Nếu chưa có tên bài
+            // lấy tên file ảnh
+
+            if (
+                !articleTitle.value.trim()
+            ) {
+
+                articleTitle.value =
+                    file.name
+                    .replace(
+                        /\.[^/.]+$/,
+                        ""
+                    )
+                    .replace(
+                        /[-_]+/g,
+                        " "
+                    );
+
+            }
+
+
+            ocrStatus.innerHTML =
+                "✅ Đã nhận dạng xong. " +
+                "Anh kiểm tra bài rồi bấm Nạp bài.";
+
+        }
+
+
+        catch(error) {
+
+            console.error(error);
+
+
+            ocrStatus.innerHTML =
+                "❌ OCR lỗi. " +
+                "Anh thử ảnh rõ hơn.";
+
+        }
+
+
+        imageInput.value =
+            "";
 
     };
 
@@ -901,8 +1200,10 @@ startButton.onclick =
         if (!recognition) {
 
             alert(
-                "Trình duyệt không hỗ trợ nhận diện giọng nói."
+                "Trình duyệt không hỗ trợ " +
+                "nhận diện giọng nói."
             );
+
 
             return;
 
@@ -914,6 +1215,7 @@ startButton.onclick =
             alert(
                 "Anh hãy nạp bài trước."
             );
+
 
             return;
 
@@ -932,7 +1234,9 @@ startButton.onclick =
 
             recognition.start();
 
-        } catch (error) {
+        }
+
+        catch(error) {
 
             console.log(error);
 
@@ -942,7 +1246,7 @@ startButton.onclick =
 
 
 // =============================
-// NHẬN KẾT QUẢ
+// KẾT QUẢ GIỌNG NÓI
 // =============================
 
 if (recognition) {
@@ -951,7 +1255,8 @@ if (recognition) {
         function(event) {
 
             const spokenText =
-                event.results[0][0].transcript;
+                event.results[0][0]
+                .transcript;
 
 
             result.innerHTML =
@@ -959,8 +1264,11 @@ if (recognition) {
 
 
             calculateScore(
+
                 sentences[currentSentence],
+
                 spokenText
+
             );
 
         };
@@ -988,11 +1296,13 @@ function calculateScore(
 ) {
 
     const originalWords =
-        normalize(original).split(" ");
+        normalize(original)
+        .split(" ");
 
 
     const spokenWords =
-        normalize(spoken).split(" ");
+        normalize(spoken)
+        .split(" ");
 
 
     let correct = 0;
@@ -1002,7 +1312,8 @@ function calculateScore(
         function(word, index) {
 
             if (
-                spokenWords[index] === word
+                spokenWords[index] ===
+                word
             ) {
 
                 correct++;
@@ -1013,11 +1324,13 @@ function calculateScore(
     );
 
 
-    let percentage =
+    const percentage =
         Math.round(
+
             correct /
             originalWords.length *
             100
+
         );
 
 
@@ -1034,9 +1347,19 @@ function calculateScore(
 function normalize(text) {
 
     return text
+
         .toLowerCase()
-        .replace(/[.,!?;:'"]/g, "")
-        .replace(/\s+/g, " ")
+
+        .replace(
+            /[.,!?;:'"]/g,
+            ""
+        )
+
+        .replace(
+            /\s+/g,
+            " "
+        )
+
         .trim();
 
 }
@@ -1049,16 +1372,21 @@ function normalize(text) {
 previousButton.onclick =
     function() {
 
-        if (sentences.length === 0) {
+        if (
+            sentences.length === 0
+        ) {
 
             return;
 
         }
 
 
-        if (currentSentence > 0) {
+        if (
+            currentSentence > 0
+        ) {
 
             currentSentence--;
+
 
             showSentence();
 
@@ -1074,7 +1402,9 @@ previousButton.onclick =
 nextButton.onclick =
     function() {
 
-        if (sentences.length === 0) {
+        if (
+            sentences.length === 0
+        ) {
 
             return;
 
@@ -1087,6 +1417,7 @@ nextButton.onclick =
         ) {
 
             currentSentence++;
+
 
             showSentence();
 
@@ -1103,12 +1434,12 @@ renderArticleList();
 
 
 // =============================
-// TỰ ĐỘNG KHÔI PHỤC BÀI CUỐI
+// KHÔI PHỤC BÀI CUỐI
 // =============================
 
 const lastArticleId =
     localStorage.getItem(
-        "englishReaderLastArticle"
+        "helloEnglishLastArticle"
     );
 
 
@@ -1121,39 +1452,50 @@ if (lastArticleId) {
 }
 
 
-// Khi chọn bài, nhớ bài cuối cùng
-const originalLoadSavedArticle =
-    loadSavedArticle;
+// =============================
+// SERVICE WORKER
+// =============================
 
+if (
+    "serviceWorker" in navigator
+) {
 
-</script>
-<script>
+    window.addEventListener(
+        "load",
+        function() {
 
-if ("serviceWorker" in navigator) {
+            navigator.serviceWorker
+                .register("./sw.js")
 
-    window.addEventListener("load", function() {
+                .then(
+                    function() {
 
-        navigator.serviceWorker.register("./sw.js")
-            .then(function() {
+                        console.log(
+                            "Hello English: " +
+                            "Service Worker registered"
+                        );
 
-                console.log(
-                    "English Reader: Service Worker registered"
+                    }
+                )
+
+                .catch(
+                    function(error) {
+
+                        console.log(
+                            "Service Worker error:",
+                            error
+                        );
+
+                    }
                 );
 
-            })
-            .catch(function(error) {
-
-                console.log(
-                    "Service Worker error:",
-                    error
-                );
-
-            });
-
-    });
+        }
+    );
 
 }
 
 </script>
+
+
 </body>
 </html>
